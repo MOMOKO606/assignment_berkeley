@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "assignment-berkeley"
+version = "0.1.0"
+description = ""
+authors = ["BianLong0618 <bianlong0618@qq.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytest = "^8.3.3"
+fastapi = "^0.115.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
