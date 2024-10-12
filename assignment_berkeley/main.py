@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from assignment_berkeley.db.engine import DBSession, init_db
-from assignment_berkeley.db.models import DBCustomer
+from assignment_berkeley.db.engine import init_db
+from assignment_berkeley.routers import customers
 
 app = FastAPI()
 
@@ -12,11 +12,7 @@ def startup_event():
     init_db(DB_FILE)
 
 
-@app.get("/customers")
-def read_all_customers():
-    session = DBSession()
-    customers = session.query(DBCustomer).all()
-    return customers
+app.include_router(customers.router)
 
 
 @app.get("/")
