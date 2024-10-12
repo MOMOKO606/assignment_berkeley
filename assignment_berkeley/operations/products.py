@@ -14,6 +14,16 @@ class ProductCreateData(BaseModel):
         orm_mode = True
 
 
+class ProductUpdateData(BaseModel):
+    name: Optional[str] = "update_example_01"
+    description: Optional[str] = "To be updated"
+    price: Optional[float] = 8.99
+    quantity: Optional[int] = 5
+
+    class Config:
+        orm_mode = True
+
+
 class ProductResponse(BaseModel):
     id: str
     name: str
@@ -32,13 +42,22 @@ def create_product(data: ProductCreateData):
     return ProductResponse(**to_dict(product))
 
 
-# def read_all_customers():
-#     session = DBSession()
-#     customers = session.query(DBCustomer).all()
-#     return customers
+def update_product(product_id: int, data: ProductUpdateData):
+    session = DBSession()
+    product = session.query(DBProduct).get(product_id)
+    for key, value in data.dict(exclude_none=True).items():
+        setattr(product, key, value)
+    session.commit()
+    return ProductResponse(**to_dict(product))
 
 
 def get_product_by_id(product_id: int):
     session = DBSession()
     product = session.query(DBProduct).get(product_id)
     return product
+
+
+def get_all_products():
+    session = DBSession()
+    products: list[DBProduct] = session.query(DBProduct).all()
+    return [ProductResponse(**to_dict(product)) for product in products]
