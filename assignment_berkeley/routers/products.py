@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query
+from fastapi_pagination import Page, paginate
 from typing import List
 from assignment_berkeley.operations.products import (
     ProductCreateData,
@@ -36,12 +37,12 @@ def api_update_product(product_id: str, product: ProductUpdateData):
 
 @router.get(
     "/api/products/",
-    response_model=List[ProductResponse],
+    response_model=Page[ProductResponse],
     summary="Retrieve all products",
     description="This endpoint allows you to retrieve a list of all products.",
 )
 def api_get_all_products(in_stock: bool = Query(True)):
-    return get_all_products(in_stock)
+    return paginate(get_all_products(in_stock))
 
 
 @router.get(

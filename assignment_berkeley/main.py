@@ -1,8 +1,10 @@
 from fastapi import FastAPI
+from fastapi_pagination import add_pagination
 from assignment_berkeley.db.engine import init_db
 from assignment_berkeley.routers import customers, products
 
 app = FastAPI()
+add_pagination(app)
 
 DB_FILE = "sqlite:///berkeley.db"
 
