@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from assignment_berkeley.db.engine import init_db
-from assignment_berkeley.routers import customers
+from assignment_berkeley.routers import customers, products
 
 app = FastAPI()
 
@@ -13,6 +13,7 @@ def startup_event():
 
 
 app.include_router(customers.router)
+app.include_router(products.router)
 
 
 @app.get("/")

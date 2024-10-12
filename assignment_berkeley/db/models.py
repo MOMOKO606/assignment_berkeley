@@ -11,9 +11,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship, backref
+from datetime import datetime
+
 import uuid
 import enum
-from sqlalchemy.orm import relationship, backref
 
 Base = declarative_base()
 
@@ -54,7 +56,12 @@ class DBProduct(Base):
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        onupdate=func.now(),
+        nullable=False,
+    )
 
 
 order_product = Table(
