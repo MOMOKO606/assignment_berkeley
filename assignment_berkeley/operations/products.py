@@ -81,3 +81,19 @@ def get_product_by_id(product_id: str):
         raise HTTPException(status_code=404, detail="Product not found")
 
     return ProductResponse(**to_dict(product))
+
+
+def delete_product_by_id(product_id: str):
+    session = DBSession()
+    try:
+        product_uuid = UUID(product_id)  # Convert to UUID
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    product = session.query(DBProduct).filter(DBProduct.id == product_uuid).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    session.delete(product)
+    session.commit()
+    return {"detail": "Product deleted successfully"}

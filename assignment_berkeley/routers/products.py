@@ -8,6 +8,7 @@ from assignment_berkeley.operations.products import (
     update_product,
     get_all_products,
     get_product_by_id,
+    delete_product_by_id,
 )
 
 router = APIRouter()
@@ -30,7 +31,6 @@ def api_create_product(product: ProductCreateData):
     description="This endpoint allows you to update an existing product by its ID.",
 )
 def api_update_product(product_id: str, product: ProductUpdateData):
-    print("##########################################")
     return update_product(product_id, product)
 
 
@@ -47,8 +47,17 @@ def api_get_all_products(in_stock: bool = Query(True)):
 @router.get(
     "/api/products/{product_id}",
     response_model=ProductResponse,
-    summary="Get product by ID",
+    summary="Retrieve product by ID",
     description="This endpoint allows you to retrieve a product by its UUID.",
 )
 def api_get_product_by_id(product_id: str):
     return get_product_by_id(product_id)
+
+
+@router.delete(
+    "/api/products/{product_id}",
+    summary="Delete a product by ID",
+    description="This endpoint allows you to delete a product by its ID.",
+)
+def api_delete_product_by_id(product_id: str):
+    return delete_product_by_id(product_id)
