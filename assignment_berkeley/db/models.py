@@ -13,11 +13,24 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
+from typing import Any
 
 import uuid
 import enum
 
 Base = declarative_base()
+
+
+# Mapping to raw data
+def to_dict(obj: Base) -> dict[str, Any]:
+    return {
+        c.name: (
+            str(getattr(obj, c.name))
+            if isinstance(getattr(obj, c.name), (uuid.UUID, datetime))
+            else getattr(obj, c.name)
+        )
+        for c in obj.__table__.columns
+    }
 
 
 class DBCustomer(Base):
