@@ -2,6 +2,7 @@ from assignment_berkeley.db.engine import DBSession
 from assignment_berkeley.db.models import DBProduct, to_dict
 from pydantic import BaseModel
 from typing import Optional
+from fastapi import Query
 
 
 class ProductCreateData(BaseModel):
@@ -10,18 +11,12 @@ class ProductCreateData(BaseModel):
     price: float = 8.99
     quantity: int = 5
 
-    class Config:
-        orm_mode = True
-
 
 class ProductUpdateData(BaseModel):
     name: Optional[str] = "update_example_01"
     description: Optional[str] = "To be updated"
     price: Optional[float] = 8.99
     quantity: Optional[int] = 5
-
-    class Config:
-        orm_mode = True
 
 
 class ProductResponse(BaseModel):
@@ -57,7 +52,15 @@ def get_product_by_id(product_id: int):
     return product
 
 
-def get_all_products():
+def get_all_products(in_stock: bool = Query(True)):
     session = DBSession()
-    products: list[DBProduct] = session.query(DBProduct).all()
+    if in_stock:
+        products: list[DBProduct] = (
+            session.query(DBProduct).filter(DBProduct.quantity > 0).all()
+        )
+    else:
+        products: list[DBProduct] = (
+            session.query(DBProduct).filter(DBProduct.quantity <= 0).all()
+        )
+
     return [ProductResponse(**to_dict(product)) for product in products]

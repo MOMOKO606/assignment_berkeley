@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from typing import List
 from assignment_berkeley.operations.products import (
     ProductCreateData,
@@ -27,8 +27,8 @@ def api_create_product(product: ProductCreateData):
     summary="Retrieve all products",
     description="This endpoint allows you to retrieve a list of all products.",
 )
-def api_get_all_products():
-    return get_all_products()
+def api_get_all_products(in_stock: bool = Query(True)):
+    return get_all_products(in_stock)
 
 
 @router.put(
