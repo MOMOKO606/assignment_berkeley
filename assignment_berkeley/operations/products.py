@@ -2,7 +2,8 @@ from assignment_berkeley.db.engine import DBSession
 from assignment_berkeley.db.models import DBProduct, to_dict
 from pydantic import BaseModel
 from typing import Optional
-from fastapi import Query
+from fastapi import Query, HTTPException
+from uuid import UUID
 
 
 class ProductCreateData(BaseModel):
@@ -37,19 +38,21 @@ def create_product(data: ProductCreateData):
     return ProductResponse(**to_dict(product))
 
 
-def update_product(product_id: int, data: ProductUpdateData):
+def update_product(product_id: str, data: ProductUpdateData):
     session = DBSession()
-    product = session.query(DBProduct).get(product_id)
+    try:
+        product_id = UUID(product_id)  # Convert to UUID
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    product = session.query(DBProduct).filter(DBProduct.id == product_id).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
     for key, value in data.dict(exclude_none=True).items():
         setattr(product, key, value)
     session.commit()
     return ProductResponse(**to_dict(product))
-
-
-def get_product_by_id(product_id: int):
-    session = DBSession()
-    product = session.query(DBProduct).get(product_id)
-    return product
 
 
 def get_all_products(in_stock: bool = Query(True)):
@@ -64,3 +67,17 @@ def get_all_products(in_stock: bool = Query(True)):
         )
 
     return [ProductResponse(**to_dict(product)) for product in products]
+
+
+def get_product_by_id(product_id: str):
+    session = DBSession()
+    try:
+        product_uuid = UUID(product_id)  # Convert to UUID
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    product = session.query(DBProduct).filter(DBProduct.id == product_uuid).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return ProductResponse(**to_dict(product))
