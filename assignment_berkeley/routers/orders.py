@@ -3,9 +3,11 @@ from fastapi import APIRouter
 from fastapi_pagination import Page, paginate
 from assignment_berkeley.operations.orders import (
     OrderResponse,
+    OrderStatusUpdateData,
     create_order,
     get_all_orders,
     get_order_by_id,
+    update_order_status,
 )
 from assignment_berkeley.operations.orders import OrderCreateData
 
@@ -42,3 +44,13 @@ def api_get_all_orders(
     payment_status: Optional[str] = None,
 ):
     return paginate(get_all_orders(status=status, payment_status=payment_status))
+
+
+@router.put(
+    "/api/orders/{order_id}/status",
+    response_model=OrderResponse,
+    summary="Update the status of an order",
+    description="This endpoint allows you to update the status of an order with specific allowed transitions.",
+)
+def api_update_order_status(order_id: str, data: OrderStatusUpdateData):
+    return update_order_status(order_id, data)

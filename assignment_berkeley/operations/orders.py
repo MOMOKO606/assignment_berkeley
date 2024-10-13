@@ -43,6 +43,10 @@ class GetAllOrdersResponse(BaseModel):
     orders: List[OrderResponse]
 
 
+class OrderStatusUpdateData(BaseModel):
+    status: str
+
+
 def create_order(data: OrderCreateData) -> OrderResponse:
     session = DBSession()
 
@@ -141,3 +145,42 @@ def get_all_orders(
         order_responses.append(OrderResponse(**order_dict))
 
     return order_responses
+
+
+def update_order_status(order_id: str, data: OrderStatusUpdateData) -> OrderResponse:
+    session = DBSession()
+
+    order = session.query(DBOrder).filter_by(id=UUID(order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    allowed_transitions = {
+        OrderStatus.pending: ["completed", "canceled"],
+    }
+
+    current_status = order.status
+    new_status = data.status
+
+    print(current_status, new_status)
+
+    if new_status not in allowed_transitions.get(current_status, []):
+        raise HTTPException(status_code=400, detail="Invalid status transition")
+
+    order.status = new_status
+
+    order_products = session.query(order_product).filter_by(order_id=order.id).all()
+
+    products = [
+        {
+            "product_id": str(op.product_id),
+            "quantity": op.quantity,
+        }
+        for op in order_products
+    ]
+
+    order_dict = to_dict(order)
+    order_dict["products"] = products
+
+    session.commit()
+
+    return OrderResponse(**order_dict)
