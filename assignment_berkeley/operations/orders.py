@@ -161,8 +161,6 @@ def update_order_status(order_id: str, data: OrderStatusUpdateData) -> OrderResp
     current_status = order.status
     new_status = data.status
 
-    print(current_status, new_status)
-
     if new_status not in allowed_transitions.get(current_status, []):
         raise HTTPException(status_code=400, detail="Invalid status transition")
 
