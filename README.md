@@ -105,3 +105,5 @@ ASSIGNMENT_BERKELEY/
 1. **Webhook Endpoint**: The webhook endpoint's full functionality is currently not available as it requires Bearer token authentication. This feature is planned for future implementation.
 
 2. **Decoupling Demonstration**: Some endpoints in this project use protocols and interfaces for decoupling, while others do not. This is intentional to demonstrate and compare different coding approaches.
+
+3. **Feature Branch Workflow**: During development, different branches were used for different features. Once a feature was completed, it was merged into the `develop` branch, and the `develop` branch was eventually merged into the `master` branch.
