@@ -80,3 +80,26 @@ def create_order(data: OrderCreateData) -> OrderResponse:
 
     order_dict = to_dict(order)  # 使用 to_dict 将 DBOrder 转换为字典
     return OrderResponse(**order_dict, products=data.products)  # 使用解包操作符
+
+
+def get_order_by_id(order_id: str) -> OrderResponse:
+    session = DBSession()
+
+    order = session.query(DBOrder).filter_by(id=UUID(order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order_products = session.query(order_product).filter_by(order_id=order.id).all()
+
+    products = [
+        {
+            "product_id": str(op.product_id),
+            "quantity": op.quantity,
+        }
+        for op in order_products
+    ]
+
+    order_dict = to_dict(order)
+    order_dict["products"] = products
+
+    return OrderResponse(**order_dict)
