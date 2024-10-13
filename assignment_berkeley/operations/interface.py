@@ -1,0 +1,16 @@
+from typing import Any, Protocol
+
+
+DataObject = dict[str, Any]
+
+
+class DataInterface(Protocol):
+    def get_by_id(self, id: str) -> DataObject: ...
+
+    def get_all(self) -> list[DataObject]: ...
+
+    def create(self, data: DataObject) -> DataObject: ...
+
+    def update(self, id: str, data: DataObject) -> DataObject: ...
+
+    def delete(self, id: str) -> DataObject: ...
