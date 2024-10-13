@@ -11,7 +11,7 @@ from assignment_berkeley.db.models import (
 )
 from assignment_berkeley.helpers.product_helpers import validate_and_get_product
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 
@@ -37,6 +37,10 @@ class OrderResponse(BaseModel):
     products: List[OrderProductData]
     created_at: str
     updated_at: str
+
+
+class GetAllOrdersResponse(BaseModel):
+    orders: List[OrderResponse]
 
 
 def create_order(data: OrderCreateData) -> OrderResponse:
@@ -103,3 +107,37 @@ def get_order_by_id(order_id: str) -> OrderResponse:
     order_dict["products"] = products
 
     return OrderResponse(**order_dict)
+
+
+def get_all_orders(
+    status: Optional[str] = None, payment_status: Optional[str] = None
+) -> List[OrderResponse]:
+    session = DBSession()
+
+    query = session.query(DBOrder)
+
+    if status:
+        query = query.filter(DBOrder.status == status)
+
+    if payment_status:
+        query = query.filter(DBOrder.payment_status == payment_status)
+
+    orders = query.all()
+
+    order_responses = []
+    for order in orders:
+        order_products = session.query(order_product).filter_by(order_id=order.id).all()
+
+        products = [
+            {
+                "product_id": str(op.product_id),
+                "quantity": op.quantity,
+            }
+            for op in order_products
+        ]
+
+        order_dict = to_dict(order)
+        order_dict["products"] = products
+        order_responses.append(OrderResponse(**order_dict))
+
+    return order_responses

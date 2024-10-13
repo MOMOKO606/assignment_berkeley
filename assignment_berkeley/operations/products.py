@@ -1,7 +1,7 @@
 from assignment_berkeley.db.engine import DBSession
 from assignment_berkeley.db.models import DBProduct, to_dict
 from assignment_berkeley.helpers.product_helpers import validate_and_get_product
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import Optional
 from fastapi import Query, HTTPException
 from uuid import UUID
@@ -11,17 +11,33 @@ from assignment_berkeley.db.db_interface import DataObject
 
 
 class ProductCreateData(BaseModel):
-    name: str = "example_01"
-    description: str = "No description provided"
-    price: float = 8.99
-    quantity: int = 5
+    name: str = Field(default="example_01")
+    description: str = Field(default="No description provided")
+    price: float = Field(default=8.99, gt=0, description="Must be greater than 0")
+    quantity: int = Field(default=5, gt=0, description="Must be greater than 0")
+
+    @validator("price", "quantity")
+    def check_positive(cls, value):
+        if value <= 0:
+            raise ValueError("Must be greater than 0")
+        return value
 
 
 class ProductUpdateData(BaseModel):
-    name: Optional[str] = "update_example_01"
-    description: Optional[str] = "To be updated"
-    price: Optional[float] = 8.99
-    quantity: Optional[int] = 5
+    name: Optional[str] = Field(default="update_example_01")
+    description: Optional[str] = Field(default="To be updated")
+    price: Optional[float] = Field(
+        default=8.99, gt=0, description="Must be greater than 0"
+    )
+    quantity: Optional[int] = Field(
+        default=5, gt=0, description="Must be greater than 0"
+    )
+
+    @validator("price", "quantity", pre=True, always=True)
+    def check_positive_optional(cls, value):
+        if value is not None and value <= 0:
+            raise ValueError("Must be greater than 0")
+        return value
 
 
 class ProductResponse(BaseModel):
