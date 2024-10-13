@@ -106,7 +106,12 @@ class DBOrder(Base):
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     customer = relationship(
         "DBCustomer", backref=backref("orders", cascade="all, delete-orphan")
