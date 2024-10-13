@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Query
+from fastapi_pagination import Page, paginate
+from assignment_berkeley.db.db_interface import DBInterface
+from assignment_berkeley.db.models import DBProduct
 from typing import List
 from assignment_berkeley.operations.products import (
     ProductCreateData,
@@ -36,12 +39,12 @@ def api_update_product(product_id: str, product: ProductUpdateData):
 
 @router.get(
     "/api/products/",
-    response_model=List[ProductResponse],
+    response_model=Page[ProductResponse],
     summary="Retrieve all products",
     description="This endpoint allows you to retrieve a list of all products.",
 )
 def api_get_all_products(in_stock: bool = Query(True)):
-    return get_all_products(in_stock)
+    return paginate(get_all_products(in_stock))
 
 
 @router.get(
@@ -51,7 +54,9 @@ def api_get_all_products(in_stock: bool = Query(True)):
     description="This endpoint allows you to retrieve a product by its UUID.",
 )
 def api_get_product_by_id(product_id: str):
-    return get_product_by_id(product_id)
+    # 创建了一个包含Product数据和method的类的实例
+    product_interface = DBInterface(DBProduct)
+    return get_product_by_id(product_id, product_interface)
 
 
 @router.delete(
@@ -60,4 +65,5 @@ def api_get_product_by_id(product_id: str):
     description="This endpoint allows you to delete a product by its ID.",
 )
 def api_delete_product_by_id(product_id: str):
-    return delete_product_by_id(product_id)
+    product_interface = DBInterface(DBProduct)
+    return delete_product_by_id(product_id, product_interface)

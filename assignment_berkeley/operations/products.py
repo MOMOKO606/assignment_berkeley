@@ -6,6 +6,9 @@ from typing import Optional
 from fastapi import Query, HTTPException
 from uuid import UUID
 
+from assignment_berkeley.operations.interface import DataInterface
+from assignment_berkeley.db.db_interface import DataObject
+
 
 class ProductCreateData(BaseModel):
     name: str = "example_01"
@@ -62,15 +65,9 @@ def get_all_products(in_stock: bool = Query(True)):
     return [ProductResponse(**to_dict(product)) for product in products]
 
 
-def get_product_by_id(product_id: str):
-    session = DBSession()
-    product = validate_and_get_product(session, product_id)
-    return ProductResponse(**to_dict(product))
+def get_product_by_id(product_id: str, product_interface: DataInterface) -> DataObject:
+    return product_interface.get_by_id(product_id)
 
 
-def delete_product_by_id(product_id: str):
-    session = DBSession()
-    product = validate_and_get_product(session, product_id)
-    session.delete(product)
-    session.commit()
-    return {"detail": "Product deleted successfully"}
+def delete_product_by_id(product_id: str, product_interface: DBProduct) -> dict:
+    return product_interface.delete(product_id)
