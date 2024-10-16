@@ -54,9 +54,7 @@ def api_get_all_products(in_stock: bool = Query(True)):
     description="This endpoint allows you to retrieve a product by its UUID.",
 )
 def api_get_product_by_id(product_id: str):
-    # 创建了一个包含Product数据和method的类的实例
-    product_interface = DBInterface(DBProduct)
-    return get_product_by_id(product_id, product_interface)
+    return get_product_by_id(product_id)
 
 
 @router.delete(
@@ -65,5 +63,4 @@ def api_get_product_by_id(product_id: str):
     description="This endpoint allows you to delete a product by its ID.",
 )
 def api_delete_product_by_id(product_id: str):
-    product_interface = DBInterface(DBProduct)
-    return delete_product_by_id(product_id, product_interface)
+    return delete_product_by_id(product_id)
