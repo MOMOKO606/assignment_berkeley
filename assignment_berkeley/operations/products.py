@@ -60,26 +60,12 @@ def create_product(data: ProductCreateData):
 
 
 def update_product(product_id: str, data: ProductUpdateData):
-    session = DBSession()
-    product = validate_and_get_product(session, product_id)
-    for key, value in data.dict(exclude_none=True).items():
-        setattr(product, key, value)
-    session.commit()
-    return ProductResponse(**to_dict(product))
+    return product_interface.update(product_id, data.dict(exclude_none=True))
 
 
 def get_all_products(in_stock: bool = Query(True)):
-    session = DBSession()
-    if in_stock:
-        products: list[DBProduct] = (
-            session.query(DBProduct).filter(DBProduct.quantity > 0).all()
-        )
-    else:
-        products: list[DBProduct] = (
-            session.query(DBProduct).filter(DBProduct.quantity <= 0).all()
-        )
-
-    return [ProductResponse(**to_dict(product)) for product in products]
+    filter_params = {"quantity_gt": 0} if in_stock else {"quantity_lte": 0}
+    return product_interface.get_all(filter_params)
 
 
 def get_product_by_id(product_id: str) -> DataObject:
