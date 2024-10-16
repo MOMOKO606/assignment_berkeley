@@ -1,13 +1,9 @@
-from assignment_berkeley.db.engine import DBSession
-from assignment_berkeley.db.models import DBProduct, to_dict
-from assignment_berkeley.helpers.product_helpers import validate_and_get_product
 from pydantic import BaseModel, Field, validator
 from typing import Optional
-from fastapi import Query, HTTPException
-from uuid import UUID
-
+from fastapi import Query
 from assignment_berkeley.operations.interface import DataInterface
 from assignment_berkeley.db.db_interface import DBInterface, DataObject
+from assignment_berkeley.db.models import DBProduct
 
 
 class ProductCreateData(BaseModel):

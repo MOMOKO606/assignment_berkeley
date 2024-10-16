@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Query
 from fastapi_pagination import Page, paginate
-from assignment_berkeley.db.db_interface import DBInterface
-from assignment_berkeley.db.models import DBProduct
 from typing import List
 from assignment_berkeley.operations.products import (
     ProductCreateData,
