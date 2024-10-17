@@ -41,8 +41,18 @@ def api_update_product(product_id: str, product: ProductUpdateData):
     summary="Retrieve all products",
     description="This endpoint allows you to retrieve a list of all products.",
 )
-def api_get_all_products(in_stock: bool = Query(True)):
-    return paginate(get_all_products(in_stock))
+def api_get_all_products(
+    in_stock: bool = Query(True),
+    # min_price: Optional[float] = Query(None, gt=0, description="Minimum price"),
+    # max_price: Optional[float] = Query(None, description="Maximum price"),
+):
+    filter_params = {
+        "quantity_gt": 0 if in_stock else float("-inf"),
+        "quantity_lte": float("inf") if in_stock else 0,
+        # "price_gt": min_price,
+        # "price_lte": max_price,
+    }
+    return paginate(get_all_products(filter_params))
 
 
 @router.get(

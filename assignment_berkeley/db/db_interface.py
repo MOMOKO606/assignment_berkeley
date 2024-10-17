@@ -1,5 +1,6 @@
 from typing import Any, Optional
 from fastapi import HTTPException
+from sqlalchemy import and_
 from assignment_berkeley.db.models import Base, to_dict
 from assignment_berkeley.helpers.product_helpers import validate_and_get_product
 from assignment_berkeley.helpers.db_helpers import with_session
@@ -27,15 +28,14 @@ class DBInterface:
             raise ValueError("Session is required")
         query = session.query(self.db_class)
 
-        if filter_params:
-            if "quantity_gt" in filter_params:
-                query = query.filter(
-                    self.db_class.quantity > filter_params["quantity_gt"]
-                )
-            elif "quantity_lte" in filter_params:
-                query = query.filter(
-                    self.db_class.quantity <= filter_params["quantity_lte"]
-                )
+        filters = [
+            self.db_class.quantity > filter_params.get("quantity_gt", float("-inf")),
+            self.db_class.quantity <= filter_params.get("quantity_lte", float("inf")),
+            # self.db_class.price > filter_params.get("price_gt", 0),
+            # self.db_class.price <= filter_params.get("price_lte", float("inf")),
+        ]
+
+        query = query.filter(and_(*filters))
 
         products = query.all()
         return [to_dict(product) for product in products]

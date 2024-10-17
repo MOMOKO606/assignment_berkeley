@@ -7,7 +7,7 @@ from assignment_berkeley.db.engine import DBSession
 T = TypeVar("T")
 
 
-def with_session(func: Callable):
+def with_session(func: Callable) -> T:
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> T:
         session = DBSession()

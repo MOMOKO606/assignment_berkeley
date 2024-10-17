@@ -59,8 +59,7 @@ def update_product(product_id: str, data: ProductUpdateData):
     return product_interface.update(product_id, data.dict(exclude_none=True))
 
 
-def get_all_products(in_stock: bool = Query(True)):
-    filter_params = {"quantity_gt": 0} if in_stock else {"quantity_lte": 0}
+def get_all_products(filter_params: dict):
     return product_interface.get_all(filter_params)
 
 
