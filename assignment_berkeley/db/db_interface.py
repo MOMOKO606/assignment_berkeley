@@ -1,24 +1,45 @@
-from typing import Any, Optional
+from typing import Any, Dict, Type, Optional
+from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy import and_
-from assignment_berkeley.db.models import Base, to_dict
+from assignment_berkeley.db.models import Base, to_dict, DBProduct, DBOrder
 from assignment_berkeley.helpers.product_helpers import validate_and_get_product
 from assignment_berkeley.helpers.db_helpers import with_session
 
 DataObject = dict[str, Any]
+
+DB_CLASS_MAPPING: Dict[Type[Base], str] = {
+    DBProduct: "Product",
+    DBOrder: "Order",
+}
 
 
 class DBInterface:
     def __init__(self, db_class: type[Base]):
         self.db_class = db_class
 
+    def validate_and_get_item(self, session: Any, id: str) -> Base:
+        try:
+            item_uuid = UUID(id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+        item = (
+            session.query(self.db_class).filter(self.db_class.id == item_uuid).first()
+        )
+        if item is None:
+            entity_name: str = DB_CLASS_MAPPING.get(self.db_class, "Unknown")
+            raise HTTPException(status_code=404, detail=f"{entity_name} not found")
+
+        return item
+
     @with_session
     def get_by_id(self, id: str, *, session: Optional[Any] = None) -> DataObject:
         """通过ID获取记录"""
         if session is None:
             raise ValueError("Session is required")
-        product = validate_and_get_product(session, id)
-        return to_dict(product)
+        item = self.validate_and_get_item(session, id)
+        return to_dict(item)
 
     @with_session
     def get_all(
@@ -57,17 +78,17 @@ class DBInterface:
     ) -> DataObject:
         if session is None:
             raise ValueError("Session is required")
-        product = validate_and_get_product(session, id)
+        item = self.validate_and_get_item(session, id)
         for key, value in data.items():
-            setattr(product, key, value)
+            setattr(item, key, value)
         session.flush()  # 确保更新被应用
-        return to_dict(product)
+        return to_dict(item)
 
     @with_session
     def delete(self, id: str, *, session: Optional[Any] = None) -> DataObject:
         """删除记录"""
         if session is None:
             raise ValueError("Session is required")
-        product = validate_and_get_product(session, id)
-        session.delete(product)
+        item = self.validate_and_get_item(session, id)
+        session.delete(item)
         return {"detail": "Product deleted successfully"}
