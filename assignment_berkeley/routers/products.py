@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Query
 from fastapi_pagination import Page, paginate
 from typing import List
@@ -12,6 +13,15 @@ from assignment_berkeley.operations.products import (
     delete_product_by_id,
 )
 
+logging.basicConfig(
+    level=logging.INFO,  # 设置日志级别为 INFO，确保 INFO 及以上级别的日志都输出
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],  # 输出到控制台
+)
+
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -22,7 +32,10 @@ router = APIRouter()
     description="This endpoint allows you to create a new product. You need to provide the product name, description, price, and quantity.",
 )
 def api_create_product(product: ProductCreateData):
-    return create_product(product)
+    logger.info(f"Creating product with data: {product}")
+    created_product = create_product(product)
+    logger.info(f"Product created successfully: {created_product}")
+    return created_product
 
 
 @router.put(
