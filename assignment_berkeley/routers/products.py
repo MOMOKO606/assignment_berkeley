@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Query
 from fastapi_pagination import Page, paginate
-from assignment_berkeley.db.db_interface import DBInterface
-from assignment_berkeley.db.models import DBProduct
 from typing import List
 from assignment_berkeley.operations.products import (
     ProductCreateData,
@@ -43,8 +41,18 @@ def api_update_product(product_id: str, product: ProductUpdateData):
     summary="Retrieve all products",
     description="This endpoint allows you to retrieve a list of all products.",
 )
-def api_get_all_products(in_stock: bool = Query(True)):
-    return paginate(get_all_products(in_stock))
+def api_get_all_products(
+    in_stock: bool = Query(True),
+    # min_price: Optional[float] = Query(None, gt=0, description="Minimum price"),
+    # max_price: Optional[float] = Query(None, description="Maximum price"),
+):
+    filter_params = {
+        "quantity_gt": 0 if in_stock else float("-inf"),
+        "quantity_lte": float("inf") if in_stock else 0,
+        # "price_gt": min_price,
+        # "price_lte": max_price,
+    }
+    return paginate(get_all_products(filter_params))
 
 
 @router.get(
@@ -54,9 +62,7 @@ def api_get_all_products(in_stock: bool = Query(True)):
     description="This endpoint allows you to retrieve a product by its UUID.",
 )
 def api_get_product_by_id(product_id: str):
-    # 创建了一个包含Product数据和method的类的实例
-    product_interface = DBInterface(DBProduct)
-    return get_product_by_id(product_id, product_interface)
+    return get_product_by_id(product_id)
 
 
 @router.delete(
@@ -65,5 +71,4 @@ def api_get_product_by_id(product_id: str):
     description="This endpoint allows you to delete a product by its ID.",
 )
 def api_delete_product_by_id(product_id: str):
-    product_interface = DBInterface(DBProduct)
-    return delete_product_by_id(product_id, product_interface)
+    return delete_product_by_id(product_id)

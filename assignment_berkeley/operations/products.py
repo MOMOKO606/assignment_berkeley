@@ -1,13 +1,9 @@
-from assignment_berkeley.db.engine import DBSession
-from assignment_berkeley.db.models import DBProduct, to_dict
-from assignment_berkeley.helpers.product_helpers import validate_and_get_product
 from pydantic import BaseModel, Field, validator
 from typing import Optional
-from fastapi import Query, HTTPException
-from uuid import UUID
-
+from fastapi import Query
 from assignment_berkeley.operations.interface import DataInterface
-from assignment_berkeley.db.db_interface import DataObject
+from assignment_berkeley.db.db_interface import DBInterface, DataObject
+from assignment_berkeley.db.models import DBProduct
 
 
 class ProductCreateData(BaseModel):
@@ -50,40 +46,26 @@ class ProductResponse(BaseModel):
     updated_at: str
 
 
+# Create an instance of DBInterface where contains the CRUD methods
+# The pass-in argument is the DBProduct
+product_interface: DataInterface = DBInterface(DBProduct)
+
+
 def create_product(data: ProductCreateData):
-    session = DBSession()
-    product = DBProduct(**data.dict())
-    session.add(product)
-    session.commit()
-    return ProductResponse(**to_dict(product))
+    return product_interface.create(data.dict())
 
 
 def update_product(product_id: str, data: ProductUpdateData):
-    session = DBSession()
-    product = validate_and_get_product(session, product_id)
-    for key, value in data.dict(exclude_none=True).items():
-        setattr(product, key, value)
-    session.commit()
-    return ProductResponse(**to_dict(product))
+    return product_interface.update(product_id, data.dict(exclude_none=True))
 
 
-def get_all_products(in_stock: bool = Query(True)):
-    session = DBSession()
-    if in_stock:
-        products: list[DBProduct] = (
-            session.query(DBProduct).filter(DBProduct.quantity > 0).all()
-        )
-    else:
-        products: list[DBProduct] = (
-            session.query(DBProduct).filter(DBProduct.quantity <= 0).all()
-        )
-
-    return [ProductResponse(**to_dict(product)) for product in products]
+def get_all_products(filter_params: dict):
+    return product_interface.get_all(filter_params)
 
 
-def get_product_by_id(product_id: str, product_interface: DataInterface) -> DataObject:
+def get_product_by_id(product_id: str) -> DataObject:
     return product_interface.get_by_id(product_id)
 
 
-def delete_product_by_id(product_id: str, product_interface: DBProduct) -> dict:
+def delete_product_by_id(product_id: str) -> dict:
     return product_interface.delete(product_id)
