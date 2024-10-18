@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from fastapi_pagination import Page, paginate
 from assignment_berkeley.operations.orders import (
     OrderOperations,
@@ -57,3 +57,28 @@ def api_get_all_orders(
 )
 def api_update_order_status(order_id: str, data: OrderStatusUpdateData):
     return order_ops.update_order_status(order_id, data)
+
+
+# @router.post(
+#     "/api/orders/{order_id}/reserve",
+#     response_model=OrderResponse,
+#     summary="Reserve an order for 15 minutes",
+#     description="Reserves the order and its products for 15 minutes. If not completed within this time, the reservation will expire.",
+# )
+# def api_reserve_order(
+#     order_id: str, background_tasks: BackgroundTasks
+# ) -> OrderResponse:
+#     response = order_ops.reserve_order(order_id)
+#     # 添加后台任务处理过期预订
+#     background_tasks.add_task(order_ops.handle_reservation_expiration)
+#     return response
+
+
+# @router.post(
+#     "/api/orders/{order_id}/complete",
+#     response_model=OrderResponse,
+#     summary="Complete a reserved order",
+#     description="Completes a reserved order if the reservation hasn't expired.",
+# )
+# def api_complete_reserved_order(order_id: str) -> OrderResponse:
+#     return order_ops.complete_reserved_order(order_id)
