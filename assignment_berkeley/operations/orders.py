@@ -45,6 +45,7 @@ class OrderResponse(BaseModel):
 
 
 class OrderOperations(DBInterface):
+    # RESERVATION_TIMEOUT = timedelta(minutes=15)
     def __init__(self):
         super().__init__(DBOrder)
 
@@ -154,3 +155,187 @@ class OrderOperations(DBInterface):
             updated_data["payment_status"] = "paid"
         order_dict = self.update(order_id, updated_data, session=session)
         return self._add_products_to_response(order_dict, session)
+
+    # @with_session
+    # def reserve_order(self, order_id: str, *, session=None) -> OrderResponse:
+    #     """
+    #     Reserve products for an order with 15-minute timeout
+    #     """
+    #     try:
+    #         # 锁定订单记录
+    #         order = (
+    #             session.query(DBOrder)
+    #             .filter(DBOrder.id == UUID(order_id))
+    #             .with_for_update()
+    #             .first()
+    #         )
+
+    #         if not order:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+    #             )
+
+    #         # 检查订单状态
+    #         if order.status != OrderStatus.pending:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_400_BAD_REQUEST,
+    #                 detail=f"Cannot reserve order in {order.status} status",
+    #             )
+
+    #         if order.reservation_status == ReservationStatus.reserved:
+    #             if order.reservation_expires_at > datetime.now():
+    #                 raise HTTPException(
+    #                     status_code=status.HTTP_400_BAD_REQUEST,
+    #                     detail="Order is already reserved",
+    #                 )
+
+    #         # 获取并锁定订单中的所有产品
+    #         order_products = (
+    #             session.query(order_product)
+    #             .filter(order_product.c.order_id == order.id)
+    #             .all()
+    #         )
+
+    #         # 锁定并检查产品库存
+    #         for op in order_products:
+    #             product = (
+    #                 session.query(DBProduct)
+    #                 .filter(DBProduct.id == op.product_id)
+    #                 .with_for_update()
+    #                 .first()
+    #             )
+
+    #             if not product:
+    #                 raise HTTPException(
+    #                     status_code=status.HTTP_404_NOT_FOUND,
+    #                     detail=f"Product {op.product_id} not found",
+    #                 )
+
+    #             if product.quantity < op.quantity:
+    #                 raise HTTPException(
+    #                     status_code=status.HTTP_400_BAD_REQUEST,
+    #                     detail=f"Insufficient stock for product {product.id}",
+    #                 )
+
+    #             # 预扣库存
+    #             product.quantity -= op.quantity
+
+    #         # 更新订单预订状态
+    #         now = datetime.now()
+    #         order.reservation_status = ReservationStatus.reserved
+    #         order.reserved_at = now
+    #         order.reservation_expires_at = now + self.RESERVATION_TIMEOUT
+
+    #         # 提交更改
+    #         session.flush()
+
+    #         # 构建响应
+    #         products = [
+    #             OrderProductData(product_id=str(op.product_id), quantity=op.quantity)
+    #             for op in order_products
+    #         ]
+
+    #         return OrderResponse(
+    #             **to_dict(order),
+    #             products=products,
+    #             reservation_expires_at=order.reservation_expires_at,
+    #         )
+
+    #     except Exception as e:
+    #         session.rollback()
+    #         if isinstance(e, HTTPException):
+    #             raise e
+    #         raise HTTPException(
+    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #             detail=f"Failed to reserve order: {str(e)}",
+    #         )
+
+    # @with_session
+    # def handle_reservation_expiration(self, *, session=None):
+    #     """
+    #     处理过期的预订，释放库存
+    #     """
+    #     expired_orders = (
+    #         session.query(DBOrder)
+    #         .filter(
+    #             and_(
+    #                 DBOrder.reservation_status == ReservationStatus.reserved,
+    #                 DBOrder.reservation_expires_at <= datetime.now(),
+    #                 DBOrder.status == OrderStatus.pending,
+    #             )
+    #         )
+    #         .with_for_update()
+    #         .all()
+    #     )
+
+    #     for order in expired_orders:
+    #         # 获取订单产品
+    #         order_products = (
+    #             session.query(order_product)
+    #             .filter(order_product.c.order_id == order.id)
+    #             .all()
+    #         )
+
+    #         # 返还库存
+    #         for op in order_products:
+    #             product = (
+    #                 session.query(DBProduct)
+    #                 .filter(DBProduct.id == op.product_id)
+    #                 .with_for_update()
+    #                 .first()
+    #             )
+    #             if product:
+    #                 product.quantity += op.quantity
+
+    #         # 更新订单状态
+    #         order.reservation_status = ReservationStatus.expired
+
+    #     session.flush()
+
+    # @with_session
+    # def complete_reserved_order(self, order_id: str, *, session=None) -> OrderResponse:
+    #     """
+    #     完成已预订的订单
+    #     """
+    #     order = (
+    #         session.query(DBOrder)
+    #         .filter(DBOrder.id == UUID(order_id))
+    #         .with_for_update()
+    #         .first()
+    #     )
+
+    #     if not order:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+    #         )
+
+    #     if order.reservation_status != ReservationStatus.reserved:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not reserved"
+    #         )
+
+    #     if order.reservation_expires_at <= datetime.now():
+    #         raise HTTPException(
+    #             status_code=status.HTTP_400_BAD_REQUEST,
+    #             detail="Reservation has expired",
+    #         )
+
+    #     # 更新订单状态
+    #     order.status = OrderStatus.completed
+    #     order.reservation_status = ReservationStatus.completed
+
+    #     session.flush()
+
+    #     # 构建响应
+    #     order_products = (
+    #         session.query(order_product)
+    #         .filter(order_product.c.order_id == order.id)
+    #         .all()
+    #     )
+
+    #     products = [
+    #         OrderProductData(product_id=str(op.product_id), quantity=op.quantity)
+    #         for op in order_products
+    #     ]
+
+    #     return OrderResponse(**to_dict(order), products=products)

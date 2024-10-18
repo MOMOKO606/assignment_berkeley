@@ -88,6 +88,14 @@ order_product = Table(
 )
 
 
+# class ReservationStatus(str, enum.Enum):
+#     pending = "pending"
+#     reserved = "reserved"
+#     expired = "expired"
+#     completed = "completed"
+#     cancelled = "cancelled"
+
+
 class DBOrder(Base):
     __tablename__ = "orders"
     id = Column(
@@ -112,6 +120,9 @@ class DBOrder(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    # reservation_status = Column(SQLEnum(ReservationStatus), default=ReservationStatus.pending)
+    # reserved_at = Column(DateTime, nullable=True)
+    # reservation_expires_at = Column(DateTime, nullable=True)
 
     customer = relationship(
         "DBCustomer", backref=backref("orders", cascade="all, delete-orphan")

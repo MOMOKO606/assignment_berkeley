@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from fastapi_pagination import Page, paginate
 from typing import List
+from assignment_berkeley.config import logger
 from assignment_berkeley.operations.products import (
     ProductCreateData,
     ProductUpdateData,
@@ -12,6 +13,7 @@ from assignment_berkeley.operations.products import (
     delete_product_by_id,
 )
 
+
 router = APIRouter()
 
 
@@ -22,7 +24,10 @@ router = APIRouter()
     description="This endpoint allows you to create a new product. You need to provide the product name, description, price, and quantity.",
 )
 def api_create_product(product: ProductCreateData):
-    return create_product(product)
+    logger.info(f"Creating product with data: {product}")
+    created_product = create_product(product)
+    logger.info(f"Product created successfully: {created_product}")
+    return created_product
 
 
 @router.put(
