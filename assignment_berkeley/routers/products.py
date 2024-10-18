@@ -1,7 +1,7 @@
-import logging
 from fastapi import APIRouter, Query
 from fastapi_pagination import Page, paginate
 from typing import List
+from assignment_berkeley.config import logger
 from assignment_berkeley.operations.products import (
     ProductCreateData,
     ProductUpdateData,
@@ -13,14 +13,6 @@ from assignment_berkeley.operations.products import (
     delete_product_by_id,
 )
 
-logging.basicConfig(
-    level=logging.INFO,  # 设置日志级别为 INFO，确保 INFO 及以上级别的日志都输出
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],  # 输出到控制台
-)
-
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
