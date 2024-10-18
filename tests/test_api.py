@@ -1,115 +1,150 @@
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from assignment_berkeley.db.models import Base
-from assignment_berkeley.main import app
-from assignment_berkeley.db.engine import get_db
-
-# Create a new engine instance
-TEST_SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    TEST_SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create all tables in the test database
-Base.metadata.create_all(bind=engine)
+from uuid import UUID
+from unittest.mock import Mock, patch, MagicMock
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 
-# Override the get_db dependency
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+from assignment_berkeley.db.models import DBCustomer, DBOrder, DBProduct, Base
+from assignment_berkeley.helpers.db_helpers import with_session, validate_and_get_item
 
 
-app.dependency_overrides[get_db] = override_get_db
+class TestWithSession:
+    def test_successful_read_operation(self):
+        # 创建一个模拟的类和方法
+        class DummyClass:
+            @with_session
+            def dummy_read(self, session=None):
+                return "success"
 
-client = TestClient(app)
+        # 测试读操作
+        dummy = DummyClass()
+        result = dummy.dummy_read()
+        assert result == "success"
 
-# Test functions
+    def test_successful_write_operation(self):
+        # 模拟写操作（create/update/delete）
+        class DummyClass:
+            @with_session
+            def create(self, session=None):
+                return "created"
+
+        dummy = DummyClass()
+        result = dummy.create()
+        assert result == "created"
+
+    def test_exception_handling(self):
+        # 测试异常处理
+        class DummyClass:
+            @with_session
+            def create(self, session=None):
+                raise ValueError("Test error")
+
+        dummy = DummyClass()
+        with pytest.raises(HTTPException) as exc_info:
+            dummy.create()
+        assert exc_info.value.status_code == 400
+        assert "Test error" in str(exc_info.value.detail)
+
+    @patch("assignment_berkeley.db.engine.DBSession")
+    def test_session_management(self, mock_db_session):
+        # 创建模拟的session对象
+        mock_session = Mock()
+        mock_db_session.return_value = mock_session
+
+        class DummyClass:
+            @with_session
+            def create(self, session=None):
+                return "success"
+
+        dummy = DummyClass()
+        dummy.create()
+
+        # 验证session的正确使用
+        mock_session.commit.assert_called_once()
+        mock_session.close.assert_called_once()
+
+    @patch("assignment_berkeley.db.engine.DBSession")
+    def test_session_rollback_on_error(self, mock_db_session):
+        # 测试出错时的回滚操作
+        mock_session = Mock()
+        mock_db_session.return_value = mock_session
+
+        class DummyClass:
+            @with_session
+            def create(self, session=None):
+                raise ValueError("Test error")
+
+        dummy = DummyClass()
+        with pytest.raises(HTTPException):
+            dummy.create()
+
+        # 验证回滚被调用
+        mock_session.rollback.assert_called_once()
+        mock_session.close.assert_called_once()
 
 
-def test_create_order():
-    # First, create a customer
-    customer_response = client.post(
-        "/api/customers",
-        json={"first_name": "John", "last_name": "Doe", "email": "john@example.com"},
-    )
-    assert customer_response.status_code == 200
-    customer_id = customer_response.json()["id"]
+class TestValidateAndGetItem:
+    def setup_method(self):
+        self.mock_session = Mock(spec=Session)
+        self.valid_uuid = "123e4567-e89b-12d3-a456-426614174000"
 
-    # Then, create a product
-    product_response = client.post(
-        "/api/products",
-        json={
-            "name": "Test Product",
-            "description": "A test product",
-            "price": 9.99,
-            "quantity": 10,
-        },
-    )
-    assert product_response.status_code == 200
-    product_id = product_response.json()["id"]
+    def test_valid_uuid_customer(self):
+        # 测试有效的UUID
+        mock_customer = Mock(spec=DBCustomer)
+        self.mock_session.query.return_value.filter.return_value.first.return_value = (
+            mock_customer
+        )
 
-    # Now, create an order
-    order_response = client.post(
-        "/api/orders",
-        json={
-            "customer_id": customer_id,
-            "products": [{"product_id": product_id, "quantity": 2}],
-        },
-    )
-    assert order_response.status_code == 200
-    assert order_response.json()["customer_id"] == customer_id
-    assert len(order_response.json()["products"]) == 1
+        result = validate_and_get_item(self.mock_session, self.valid_uuid, DBCustomer)
+        assert result == mock_customer
 
+    def test_invalid_uuid_format(self):
+        # 测试无效的UUID格式
+        with pytest.raises(HTTPException) as exc_info:
+            validate_and_get_item(self.mock_session, "invalid-uuid", DBCustomer)
+        assert exc_info.value.status_code == 400
+        assert "Invalid UUID format" in str(exc_info.value.detail)
 
-def test_get_order():
-    # First, create an order (reusing the create_order test)
-    test_create_order()
+    def test_not_found_item(self):
+        # 测试找不到对应记录的情况
+        self.mock_session.query.return_value.filter.return_value.first.return_value = (
+            None
+        )
 
-    # Get all orders to find the ID of the created order
-    all_orders_response = client.get("/api/orders")
-    assert all_orders_response.status_code == 200
-    orders = all_orders_response.json()["items"]
-    assert len(orders) > 0
-    order_id = orders[0]["id"]
+        with pytest.raises(HTTPException) as exc_info:
+            validate_and_get_item(self.mock_session, self.valid_uuid, DBCustomer)
+        assert exc_info.value.status_code == 404
+        assert "Customer not found" in str(exc_info.value.detail)
 
-    # Now, get the specific order
-    order_response = client.get(f"/api/orders/{order_id}")
-    assert order_response.status_code == 200
-    assert order_response.json()["id"] == order_id
+    def test_with_integer_id(self):
+        # 测试使用整数ID
+        mock_product = Mock(spec=DBProduct)
+        self.mock_session.query.return_value.filter.return_value.first.return_value = (
+            mock_product
+        )
 
+        result = validate_and_get_item(self.mock_session, 123, DBProduct)
+        assert result == mock_product
 
-def test_get_all_orders():
-    response = client.get("/api/orders")
-    assert response.status_code == 200
-    assert "items" in response.json()
-    assert isinstance(response.json()["items"], list)
+    def test_unknown_db_class(self):
+        # 测试未映射的数据库类
+        class UnknownModel(Base):
+            __tablename__ = "unknown"
+
+        self.mock_session.query.return_value.filter.return_value.first.return_value = (
+            None
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            validate_and_get_item(self.mock_session, self.valid_uuid, UnknownModel)
+        assert "Unknown not found" in str(exc_info.value.detail)
 
 
-def test_update_order_status():
-    # First, create an order (reusing the create_order test)
-    test_create_order()
+# 运行测试的辅助函数
+def run_tests():
+    pytest.main([__file__])
 
-    # Get all orders to find the ID of the created order
-    all_orders_response = client.get("/api/orders")
-    assert all_orders_response.status_code == 200
-    orders = all_orders_response.json()["items"]
-    assert len(orders) > 0
-    order_id = orders[0]["id"]
 
-    # Update the order status
-    update_response = client.put(
-        f"/api/orders/{order_id}/status", json={"status": "completed"}
-    )
-    assert update_response.status_code == 200
-    assert update_response.json()["status"] == "completed"
+if __name__ == "__main__":
+    run_tests()
