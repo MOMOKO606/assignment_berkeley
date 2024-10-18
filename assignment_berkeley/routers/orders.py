@@ -5,12 +5,9 @@ from assignment_berkeley.operations.orders import (
     OrderOperations,
     OrderResponse,
     OrderStatusUpdateData,
-    create_order,
-    get_all_orders,
-    get_order_by_id,
-    update_order_status,
+    OrderCreateData,
 )
-from assignment_berkeley.operations.orders import OrderCreateData
+
 
 router = APIRouter()
 
@@ -34,7 +31,7 @@ def api_create_order(order_data: OrderCreateData) -> OrderResponse:
     description="This endpoint allows you to retrieve an order using its ID. It returns the order details along with the associated products.",
 )
 def api_get_order_by_id(order_id: str) -> OrderResponse:
-    return get_order_by_id(order_id)
+    return order_ops.get_order_by_id(order_id)
 
 
 @router.get(
@@ -47,7 +44,9 @@ def api_get_all_orders(
     status: Optional[str] = None,
     payment_status: Optional[str] = None,
 ):
-    return paginate(get_all_orders(status=status, payment_status=payment_status))
+    return paginate(
+        order_ops.get_all_orders(status=status, payment_status=payment_status)
+    )
 
 
 @router.put(
@@ -57,4 +56,4 @@ def api_get_all_orders(
     description="This endpoint allows you to update the status of an order with specific allowed transitions.",
 )
 def api_update_order_status(order_id: str, data: OrderStatusUpdateData):
-    return update_order_status(order_id, data)
+    return order_ops.update_order_status(order_id, data)

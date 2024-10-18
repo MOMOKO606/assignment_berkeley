@@ -103,120 +103,78 @@ class OrderOperations:
 
         return OrderResponse(**order, products=data.products)
 
+    @with_session
+    def get_order_by_id(self, order_id: str, *, session=None) -> OrderResponse:
+        order = validate_and_get_item(session, order_id, DBOrder)
 
-def create_order(data: OrderCreateData) -> OrderResponse:
-    session = DBSession()
-
-    customer = session.query(DBCustomer).filter_by(id=data.customer_id).first()
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-
-    order = DBOrder(
-        customer_id=data.customer_id,
-        total_price=0,
-        status=OrderStatus.pending,
-        payment_status=PaymentStatus.unpaid,
-    )
-
-    total_price = 0
-
-    for item in data.products:
-        product = validate_and_get_product(session, item.product_id)
-
-        if product.quantity < item.quantity:
-            raise HTTPException(
-                status_code=400, detail="Insufficient stock for product"
-            )
-
-        total_price += product.price * item.quantity
-
-        session.add(order)
-        session.flush()
-        session.execute(
-            order_product.insert().values(
-                order_id=order.id, product_id=product.id, quantity=item.quantity
-            )
-        )
-
-    order.total_price = total_price
-
-    session.add(order)
-    session.commit()
-
-    order_dict = to_dict(order)  # 使用 to_dict 将 DBOrder 转换为字典
-    return OrderResponse(**order_dict, products=data.products)  # 使用解包操作符
-
-
-def get_order_by_id(order_id: str) -> DataObject:
-    return order_interface.get_by_id(order_id)
-
-
-def get_all_orders(
-    status: Optional[str] = None, payment_status: Optional[str] = None
-) -> List[OrderResponse]:
-    session = DBSession()
-
-    query = session.query(DBOrder)
-
-    if status:
-        query = query.filter(DBOrder.status == status)
-
-    if payment_status:
-        query = query.filter(DBOrder.payment_status == payment_status)
-
-    orders = query.all()
-
-    order_responses = []
-    for order in orders:
+        # 获取订单相关的产品
         order_products = session.query(order_product).filter_by(order_id=order.id).all()
 
         products = [
-            {
-                "product_id": str(op.product_id),
-                "quantity": op.quantity,
-            }
+            OrderProductData(product_id=str(op.product_id), quantity=op.quantity)
             for op in order_products
         ]
 
         order_dict = to_dict(order)
-        order_dict["products"] = products
-        order_responses.append(OrderResponse(**order_dict))
+        return OrderResponse(**order_dict, products=products)
 
-    return order_responses
+    @with_session
+    def get_all_orders(
+        self,
+        status: Optional[str] = None,
+        payment_status: Optional[str] = None,
+        *,
+        session=None
+    ) -> List[OrderResponse]:
+        query = session.query(DBOrder)
 
+        if status:
+            query = query.filter(DBOrder.status == status)
 
-def update_order_status(order_id: str, data: OrderStatusUpdateData) -> OrderResponse:
-    session = DBSession()
+        if payment_status:
+            query = query.filter(DBOrder.payment_status == payment_status)
 
-    order = session.query(DBOrder).filter_by(id=UUID(order_id)).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        orders = query.all()
+        order_responses = []
 
-    allowed_transitions = {
-        OrderStatus.pending: ["completed", "canceled"],
-    }
+        for order in orders:
+            order_products = (
+                session.query(order_product).filter_by(order_id=order.id).all()
+            )
+            products = [
+                OrderProductData(product_id=str(op.product_id), quantity=op.quantity)
+                for op in order_products
+            ]
 
-    current_status = order.status
-    new_status = data.status
+            order_dict = to_dict(order)
+            order_responses.append(OrderResponse(**order_dict, products=products))
 
-    if new_status not in allowed_transitions.get(current_status, []):
-        raise HTTPException(status_code=400, detail="Invalid status transition")
+        return order_responses
 
-    order.status = new_status
+    @with_session
+    def update_order_status(
+        self, order_id: str, data: OrderStatusUpdateData, *, session=None
+    ) -> OrderResponse:
+        order = validate_and_get_item(session, order_id, DBOrder)
 
-    order_products = session.query(order_product).filter_by(order_id=order.id).all()
-
-    products = [
-        {
-            "product_id": str(op.product_id),
-            "quantity": op.quantity,
+        allowed_transitions = {
+            OrderStatus.pending: ["completed", "canceled"],
         }
-        for op in order_products
-    ]
 
-    order_dict = to_dict(order)
-    order_dict["products"] = products
+        current_status = order.status
+        new_status = data.status
 
-    session.commit()
+        if new_status not in allowed_transitions.get(current_status, []):
+            raise HTTPException(status_code=400, detail="Invalid status transition")
 
-    return OrderResponse(**order_dict)
+        order.status = new_status
+
+        # 获取订单相关的产品
+        order_products = session.query(order_product).filter_by(order_id=order.id).all()
+        products = [
+            OrderProductData(product_id=str(op.product_id), quantity=op.quantity)
+            for op in order_products
+        ]
+
+        order_dict = to_dict(order)
+        return OrderResponse(**order_dict, products=products)
