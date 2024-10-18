@@ -30,21 +30,19 @@ class DBInterface:
     def get_all(
         self, filter_params: dict = None, *, session: Optional[Any] = None
     ) -> list[DataObject]:
+        """增强的get_all方法，支持通用过滤"""
         if session is None:
             raise ValueError("Session is required")
+
         query = session.query(self.db_class)
 
-        filters = [
-            self.db_class.quantity > filter_params.get("quantity_gt", float("-inf")),
-            self.db_class.quantity <= filter_params.get("quantity_lte", float("inf")),
-            # self.db_class.price > filter_params.get("price_gt", 0),
-            # self.db_class.price <= filter_params.get("price_lte", float("inf")),
-        ]
+        if filter_params:
+            for key, value in filter_params.items():
+                if hasattr(self.db_class, key) and value is not None:
+                    query = query.filter(getattr(self.db_class, key) == value)
 
-        query = query.filter(and_(*filters))
-
-        products = query.all()
-        return [to_dict(product) for product in products]
+        items = query.all()
+        return [to_dict(item) for item in items]
 
     @with_session
     def create(self, data: DataObject, *, session: Optional[Any] = None) -> DataObject:
