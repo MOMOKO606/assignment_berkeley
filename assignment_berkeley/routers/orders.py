@@ -1,36 +1,37 @@
 from typing import Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from fastapi_pagination import Page, paginate
 from assignment_berkeley.operations.orders import (
+    OrderOperations,
     OrderResponse,
     OrderStatusUpdateData,
-    create_order,
-    get_all_orders,
-    get_order_by_id,
-    update_order_status,
+    OrderCreateData,
 )
-from assignment_berkeley.operations.orders import OrderCreateData
+
 
 router = APIRouter()
+
+order_ops = OrderOperations()
 
 
 @router.post(
     "/api/orders",
+    response_model=OrderResponse,
     summary="Create a new order",
     description="This endpoint allows you to create a new order. Provide customer ID and list of products with their quantities.",
 )
 def api_create_order(order_data: OrderCreateData) -> OrderResponse:
-    return create_order(order_data)
+    return order_ops.create_order(order_data)
 
 
 @router.get(
     "/api/orders/{order_id}",
+    response_model=OrderResponse,
     summary="Get an order by ID",
     description="This endpoint allows you to retrieve an order using its ID. It returns the order details along with the associated products.",
-    response_model=OrderResponse,
 )
 def api_get_order_by_id(order_id: str) -> OrderResponse:
-    return get_order_by_id(order_id)
+    return order_ops.get_order_by_id(order_id)
 
 
 @router.get(
@@ -43,7 +44,9 @@ def api_get_all_orders(
     status: Optional[str] = None,
     payment_status: Optional[str] = None,
 ):
-    return paginate(get_all_orders(status=status, payment_status=payment_status))
+    return paginate(
+        order_ops.get_all_orders(status=status, payment_status=payment_status)
+    )
 
 
 @router.put(
@@ -53,4 +56,29 @@ def api_get_all_orders(
     description="This endpoint allows you to update the status of an order with specific allowed transitions.",
 )
 def api_update_order_status(order_id: str, data: OrderStatusUpdateData):
-    return update_order_status(order_id, data)
+    return order_ops.update_order_status(order_id, data)
+
+
+# @router.post(
+#     "/api/orders/{order_id}/reserve",
+#     response_model=OrderResponse,
+#     summary="Reserve an order for 15 minutes",
+#     description="Reserves the order and its products for 15 minutes. If not completed within this time, the reservation will expire.",
+# )
+# def api_reserve_order(
+#     order_id: str, background_tasks: BackgroundTasks
+# ) -> OrderResponse:
+#     response = order_ops.reserve_order(order_id)
+#     # 添加后台任务处理过期预订
+#     background_tasks.add_task(order_ops.handle_reservation_expiration)
+#     return response
+
+
+# @router.post(
+#     "/api/orders/{order_id}/complete",
+#     response_model=OrderResponse,
+#     summary="Complete a reserved order",
+#     description="Completes a reserved order if the reservation hasn't expired.",
+# )
+# def api_complete_reserved_order(order_id: str) -> OrderResponse:
+#     return order_ops.complete_reserved_order(order_id)

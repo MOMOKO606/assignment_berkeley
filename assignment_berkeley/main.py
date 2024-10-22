@@ -9,6 +9,8 @@ add_pagination(app)
 DB_FILE = "sqlite:///berkeley.db"
 
 
+# Call startup_event automatically when app is running.
+# Initialize the database.
 @app.on_event("startup")
 def startup_event():
     init_db(DB_FILE)
